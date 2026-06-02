@@ -47,6 +47,11 @@ config CONTROLLER_LEE
     help
         Use the Lee controller as default
 
+config CONTROLLER_JAIR
+    bool "JAIR controller"
+    help
+        Use the JAIR controller as default
+        
 endchoice
 
 config CONTROLLER_OOT
