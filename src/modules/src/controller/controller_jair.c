@@ -56,25 +56,25 @@
 #include "platform_defaults.h"
 
 /* ============================================================== */
-/*  Constantes físicas del CF2.1 (platform_defaults_cf2.h)       */
+/* Constantes físicas del CF2.1 con 7x20mm Upgrade Kit           */
 /* ============================================================== */
 /*
  * Derivadas de platform_defaults_cf2.h:
- *   THRUST_MAX    = 0.12 N/motor
- *   THRUST_MIN    = 0.012818 N/motor
- *   ARM_LENGTH    = 0.046 m
- *   THRUST2TORQUE = 0.006993 m
- *   CF_MASS       = 0.029 kg
+ * THRUST_MAX    = 0.18 N/motor
+ * THRUST_MIN    = 0.01922636758983749f N/motor
+ * ARM_LENGTH    = 0.046 m
+ * THRUST2TORQUE = 0.005164 m
+ * CF_MASS       = 0.040 kg (motor 7x20mm + ring for suspended load)
  *
  * Torque máximo físico por eje:
- *   roll/pitch: (THRUST_MAX - THRUST_MIN) * 2 * ARM = 0.00986 N·m
- *   yaw:        (THRUST_MAX - THRUST_MIN) * 2 * T2T = 0.00150 N·m
+ * roll/pitch: (THRUST_MAX - THRUST_MIN) * 2 * ARM = 0.01479 N·m (Teorico) -> Limitado a 0.01171 N·m por software max 0.18N
+ * yaw:        (THRUST_MAX - THRUST_MIN) * 2 * T2T = 0.00166 N·m (Teorico) -> Limitado a 0.00186 N·m por software
  *
  * Se usa el 80% como límite de saturación para dejar margen.
  */
-#define CF2_MAX_THRUST_N     0.480f   /* 4 * THRUST_MAX [N]           */
-#define MAX_TORQUE_ROLL_NM   0.0079f  /* 80% de 0.00986 N·m           */
-#define MAX_TORQUE_YAW_NM    0.0012f  /* 80% de 0.00150 N·m           */
+#define CF2_MAX_THRUST_N     0.720f   /* 4 * THRUST_MAX [N]   0.480f        */
+#define MAX_TORQUE_ROLL_NM   0.00937f  /* 80% de 0.01171 N·m   0.0079f       */
+#define MAX_TORQUE_YAW_NM    0.00149f  /* 80% de 0.00186 N·m    0.0012f       */
 
 /* ============================================================== */
 /*  Ganancias por defecto (Tablas IV-VI del paper)                */
@@ -93,11 +93,16 @@
  *   k2_psi = 9.35 * J_psi = 9.35 * 9.613e-5 = 8.99e-4 N*m/s
  */
 static controllerJair_t g_self = {
-  .mass = 0.032f,   /* Masa medida experimentalmente (hover 20Mar26) *
+  //.mass = 0.032f
+  .mass = 0.027f,   /* Masa medida experimentalmente (hover 20Mar26) *
                    * Error Z=11.6cm implica masa_real~31.8g.       *
                    * Ajustar ctrlJair.mass desde cfclient si drift  *
                    * en Z persiste. Subir si sigue bajo, bajar      *
                    * si sube de mas.                               */
+                   /* Effective hover mass: 7x20mm + HQ Ultralight props.
+                    * thrustSi_hover = 0.240 N measured 08Jun26.
+                    * Physical mass = 0.040 kg; motor upgrade produces
+                    * ~1.63x more thrust per unit command than stock.  */
   //.J    = {9.827e-5f, 8.185e-5f, 9.613e-5f}, // Para CF 2.1
   .J = {16.571710e-6f, 16.655602e-6f, 29.261652e-6f}, //Para CF 2.0 (Lee)
 
@@ -134,12 +139,12 @@ static controllerJair_t g_self = {
    *   nu_x_max = Kpos_P_xy * Kpos_P_limit
    *   Con Kpos_P=8, limit=0.5: nu_x_max=4.0 m/s2 -> phi*=22deg (limite)
    *   => reducir Kpos_P_limit a 0.4 para mantener phi*<20deg          */
-  .Kpos_P       = {8.0f,  8.0f,  6.0f},  /* xy mas agresivo, z igual  */
+  .Kpos_P       = {13.0f,  13.0f,  8.0f},  /* xy mas agresivo, z igual  */
   .Kpos_D       = {4.0f,  4.0f,  4.0f},
   .Kpos_I       = {0.5f,  0.5f,  1.5f},  /* z con mas integral        */
-  .Kpos_P_limit = 0.4f,   /* max 0.4m: phi*_max=18.8deg con Kpos_P=8  */
+  .Kpos_P_limit = 0.25f,   /* max 0.4m: phi*_max=18.8deg con Kpos_P=8  */
   .Kpos_D_limit = 1.0f,
-  .Kpos_I_limit = 2.0f,   /* subido de 0.5: integral puede compensar Z */
+  .Kpos_I_limit = 2.0f,   /* subido de 0.8: integral puede compensar Z */
   .max_tilt_rad = 0.3491f,  /* 20 deg — limite anti-volteo  */
   .Lambda_xi    = {0.0f, 0.0f, 0.0f},
   //.Lambda_xi    = {2.47e-7f, 2.47e-7f, 2.47e-7f},
@@ -171,7 +176,7 @@ static controllerJair_t g_self = {
   //.Ksmc_k1    = {1.677e-4f, 1.677e-4f, 1.280e-4f},
   .Ksmc_k2    = {4.92e-3f, 4.92e-3f, 8.99e-4f},
   //.Ksmc_k2    = {8.294e-4f, 8.294e-4f, 2.736e-4f},
-  .Ksmc_max_v  = {1.479e-3f, 1.479e-3f, 2.25e-4f},  /* 15% tau_max fisico */
+  .Ksmc_max_v  = {1.75e-3f, 1.75e-3f, 2.79e-4f},  /* 15% tau_max fisico (7x20mm) */
   /* delta_s > ruido_gyro + k0*e_tipico para operar dentro de capa */
   .Ksmc_delta_s = 0.20f,   /* [rad/s]: > 0.05(ruido) + 0.1*0.2(k0*e) */
   .Ksmc_delta_e = 0.10f,   /* [rad]: ~5.7deg                          */
@@ -209,15 +214,15 @@ static controllerJair_t g_self = {
   .Kobs_1 = {1.0766f, 1.0766f, 1.2324f},
   .Kobs_2 = {0.5925f, 0.5925f, 0.7256f},
   /* K3: ESCENARIO A (sin perturb). Cambiar a 0.0729 con ventilador */
-  .Kobs_3 = {0.0060f, 0.0060f, 0.0060f},
-  //.Kobs_3 = {0.1716f, 0.1716f, 0.2574f},
+  //.Kobs_3 = {0.090f, 0.090f, 0.090f},
+  .Kobs_3 = {0.130f, 0.130f, 0.090f},
   .Kobs_4 = {1.4930f, 1.6083f, 1.6602f},
   .Kobs_5 = {0.9675f, 1.0817f, 1.1345f},
   /* K6: ESCENARIO A (sin perturb). Cambiar a 0.000047 con ventilador */
-  .Kobs_6 = {0.0001f, 0.0001f, 0.0001f},
+  .Kobs_6 = {0.000039f, 0.000039f, 0.000039f},
   //.Kobs_6 = {0.4576f, 0.5720f, 0.6292f},
-  .obs_enabled   = 0,      /* activo desde el inicio del vuelo         */
-  .obs_delta_xi  = 0.05f,  /* capa límite: filtrar ruido sin perturb   */
+  .obs_enabled   = 1,      /* activo desde el inicio del vuelo         */
+  .obs_delta_xi  = 0.07f,  /* capa límite: filtrar ruido sin perturb   */
   .obs_delta_eta = 0.05f,  /* reducir a 0.05 cuando haya perturb real  */
 
   /* Filtro IIR para eta_dot_d: fc=5Hz @ 1kHz => alpha=0.969     */
@@ -517,12 +522,12 @@ void controllerJair(controllerJair_t   *self,
     /* Saturar estimaciones de perturbación con límites físicos:
      * xi_hat3  en [m/s²]: perturbación de aceleración lineal, max ~5 m/s²
      * eta_hat3 en [N·m]:  perturbación de torque, saturar por eje:
-     *   phi/theta: 50% de tau_roll_max = 0.50 * 0.00986 = 0.00493 N·m
-     *   psi:       50% de tau_yaw_max  = 0.50 * 0.00150 = 0.00075 N·m  */
+     * phi/theta: 50% de tau_roll_max = 0.50 * 0.01171 = 0.00585 N·m
+     * psi:       50% de tau_yaw_max  = 0.50 * 0.00186 = 0.00093 N·m  */
     self->xi_hat3  = vclampscl(self->xi_hat3, -5.0f, 5.0f);
-    self->eta_hat3.x = clampf(self->eta_hat3.x, -0.00493f, 0.00493f);
-    self->eta_hat3.y = clampf(self->eta_hat3.y, -0.00493f, 0.00493f);
-    self->eta_hat3.z = clampf(self->eta_hat3.z, -0.00075f, 0.00075f);
+    self->eta_hat3.x = clampf(self->eta_hat3.x, -0.00585f, 0.00585f);
+    self->eta_hat3.y = clampf(self->eta_hat3.y, -0.00585f, 0.00585f);
+    self->eta_hat3.z = clampf(self->eta_hat3.z, -0.00093f, 0.00093f);
 
   } else {
     self->obs_prev_enabled = 0;
