@@ -2,24 +2,24 @@
  * controller_jair.h
  *
  * Implementacion fiel al articulo:
- *   J. Anaya, A.E. Dzul, H. Rios, S. Encina-Espino
- *   "Estrategia de control basada en Modos Deslizantes para el
- *    vuelo en formacion de Quad-Rotors", COMRob 2025
+ * J. Anaya, A.E. Dzul, H. Rios, S. Encina-Espino
+ * "Estrategia de control basada en Modos Deslizantes para el
+ * vuelo en formacion de Quad-Rotors", COMRob 2025
  *
  * Arquitectura:
- *   POSICION  : PID (ec.12) + control virtual nu (ec.11a)
- *   ORIENTACION: STSMC (ec.18) con tau (ec.11b)
- *   OBSERVADOR : SM-FTO (ec.5) para xi y eta
+ * POSICION  : PID (ec.12) + control virtual nu (ec.11a)
+ * ORIENTACION: STSMC (ec.18) con tau (ec.11b)
+ * OBSERVADOR : SM-FTO (ec.5) para xi y eta
  *
  * Nota sobre unidades:
- *   Las ganancias del observador y del STSMC en el paper estan en
- *   escala de aceleracion [rad/s²] porque la ec.11b incluye J^-1.
- *   En el firmware Crazyflie, control->torque[] espera [N·m] y
- *   power_distribution aplica J^-1 internamente. Por tanto:
- *     - tau_bar se entrega en [N·m] directamente
- *     - Las ganancias k1, k2 del STSMC se escalan por J:
- *         k1_Nm = k1_paper * J,  k2_Nm = k2_paper * J
- *     - k0 es adimensional (superficie en [rad/s])
+ * Las ganancias del observador y del STSMC en el paper estan en
+ * escala de aceleracion [rad/s²] porque la ec.11b incluye J^-1.
+ * En el firmware Crazyflie, control->torque[] espera [N·m] y
+ * power_distribution aplica J^-1 internamente. Por tanto:
+ * - tau_bar se entrega en [N·m] directamente
+ * - Las ganancias k1, k2 del STSMC se escalan por J:
+ * k1_Nm = k1_paper * J,  k2_Nm = k2_paper * J
+ * - k0 es adimensional (superficie en [rad/s])
  *
  * Campos de log declarados como float escalares (no struct vec)
  * para garantizar que LOG_ADD resuelva &g_self.campo como constante
@@ -75,18 +75,17 @@ typedef struct controllerJair_s {
   /* etah_dot1 = etah2 + K4*phi1(e_eta)                           */
   /* etah_dot2 = f_eta + etah3 + K5*phi2(e_eta)                   */
   /* etah_dot3 = K6*phi3(e_eta)                                    */
-  struct vec Kobs_1;      /* K1: diag(1.0766,1.0766,1.2324)        */
-  struct vec Kobs_2;      /* K2: diag(0.5925,0.5925,0.7256)        */
-  /* K3 y K6 se calculan como K3=D_xi*obs_margin, K6=D_eta*obs_margin
-   * El usuario configura D_xi, D_eta desde cfclient según la
-   * perturbación esperada. K3 y K6 se actualizan automáticamente. */
-  float      obs_D_xi;    /* cota superior |d_xi_dot|  [m/s³]      */
-  float      obs_D_eta;   /* cota superior |d_eta_dot| [N·m/s]     */
-  float      obs_margin;  /* margen sobre D: K=D*margin (def 1.2)  */
-  struct vec Kobs_3;      /* K3 = D_xi  * margin (calculado)       */
-  struct vec Kobs_4;      /* K4: diag(1.4930,1.6083,1.6602)        */
-  struct vec Kobs_5;      /* K5: diag(0.9675,1.0817,1.1345)        */
-  struct vec Kobs_6;      /* K6 = D_eta * margin (calculado)       */
+  struct vec Kobs_1;      
+  struct vec Kobs_2;      
+  struct vec Kobs_3;      
+  struct vec Kobs_4;      
+  struct vec Kobs_5;      
+  struct vec Kobs_6;      
+  
+  /* Observer disturbance bounds — gains computed from these at init */
+  struct vec obs_D_xi;    /* [m/s³]   cota d/dt(d_xi)  per axis x,y,z */
+  struct vec obs_D_eta;   /* [N·m/s]  cota d/dt(d_eta) per axis phi,theta,psi */
+  
   uint8_t    obs_enabled; /* activar/desactivar observador          */
   float      obs_delta_xi;  /* capa límite phi3 observador pos [m]  */
   float      obs_delta_eta; /* capa límite phi3 observador ang [rad] */
